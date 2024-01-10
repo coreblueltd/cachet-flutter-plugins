@@ -7,6 +7,14 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_AWAKE
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_AWAKE_IN_BED
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_AWAKE_OUT_OF_BED
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_SLEEPING
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_SLEEPING_DEEP
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_SLEEPING_LIGHT
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_SLEEPING_REM
+import android.health.connect.datatypes.SleepSessionRecord.StageType.STAGE_TYPE_UNKNOWN
 import android.os.Build
 import android.os.Handler
 import android.util.Log
@@ -1928,17 +1936,11 @@ class HealthPlugin(private var channel: MethodChannel? = null) :
                     "value" to ChronoUnit.MINUTES.between(record.startTime, record.endTime),
                     "source_id" to "",
                     "source_name" to metadata.dataOrigin.packageName,
-                ),
-            )
-
-            is SleepStageRecord -> return listOf(
-                mapOf<String, Any>(
-                    "stage" to record.stage,
-                    "value" to ChronoUnit.MINUTES.between(record.startTime, record.endTime),
-                    "date_from" to record.startTime.toEpochMilli(),
-                    "date_to" to record.endTime.toEpochMilli(),
-                    "source_id" to "",
-                    "source_name" to metadata.dataOrigin.packageName,
+                    "stages" to record.stages.map{mapOf<String, Any>(
+                            "date_from" to it.startTime.toEpochMilli(),
+                            "date_to" to it.endTime.toEpochMilli(),
+                            "stage" to (MapSleepStageToSleepStageHC[it.stage] ?: STAGE_TYPE_UNKNOWN),
+                    )},
                 ),
             )
 
@@ -2335,6 +2337,16 @@ class HealthPlugin(private var channel: MethodChannel? = null) :
         DINNER to Field.MEAL_TYPE_DINNER,
         SNACK to Field.MEAL_TYPE_SNACK,
         MEAL_UNKNOWN to Field.MEAL_TYPE_UNKNOWN,
+    )
+
+    private val MapSleepStageToSleepStageHC = hashMapOf<Int, String>(
+            STAGE_TYPE_SLEEPING to SLEEP_ASLEEP,
+            STAGE_TYPE_AWAKE to SLEEP_AWAKE,
+            STAGE_TYPE_SLEEPING_DEEP to SLEEP_DEEP,
+            STAGE_TYPE_SLEEPING_LIGHT to SLEEP_LIGHT,
+            STAGE_TYPE_SLEEPING_REM to SLEEP_REM,
+            STAGE_TYPE_AWAKE_IN_BED to SLEEP_IN_BED,
+            STAGE_TYPE_AWAKE_OUT_OF_BED to SLEEP_OUT_OF_BED,
     )
 
     val MapToHCType = hashMapOf(
